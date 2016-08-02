@@ -239,24 +239,16 @@ static void *__dma_alloc(struct device *dev, size_t size,
 	if (coherent)
 		return ptr;
 
-	if (attrs & DMA_ATTR_NO_KERNEL_MAPPING) {
-		coherent_ptr = (void *)NO_KERNEL_MAPPING_DUMMY;
-	} else {
-		pgprot_t prot;
+	/* remove any dirty cache lines on the kernel alias */
+	__dma_flush_area(ptr, size);
 
-		if (!(attrs & DMA_ATTR_STRONGLY_ORDERED))
-			/* remove any dirty cache lines on the kernel alias */
-			__dma_flush_area(ptr, size);
+	/* create a coherent mapping */
+	page = virt_to_page(ptr);
+	coherent_ptr = dma_common_contiguous_remap(page, size, VM_USERMAP,
+						   prot, NULL);
+	if (!coherent_ptr)
+		goto no_map;
 
-		/* create a coherent mapping */
-		page = virt_to_page(ptr);
-		prot = __get_dma_pgprot(attrs, __pgprot(PROT_NORMAL_NC), false);
-		coherent_ptr = dma_common_contiguous_remap(
-					page, size, VM_USERMAP, prot,
-					__builtin_return_address(0));
-		if (!coherent_ptr)
-			goto no_map;
-	}
 	return coherent_ptr;
 
 no_map:
