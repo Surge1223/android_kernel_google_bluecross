@@ -105,6 +105,8 @@ struct kimage_arch {
 	unsigned long elf_headers_sz;
 };
 
+extern const struct kexec_file_ops kexec_image_ops;
+
 struct kimage;
 
 extern int arch_kimage_file_post_load_cleanup(struct kimage *image);
