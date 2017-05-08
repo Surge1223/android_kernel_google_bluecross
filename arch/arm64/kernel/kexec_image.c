@@ -58,17 +58,8 @@ static void *image_load(struct kimage *image,
 	flags = le64_to_cpu(h->flags);
 	be_image = arm64_image_flag_field(flags, ARM64_IMAGE_FLAG_BE);
 	be_kernel = IS_ENABLED(CONFIG_CPU_BIG_ENDIAN);
-	if ((be_image != be_kernel) && !system_supports_mixed_endian())
-		return ERR_PTR(-EINVAL);
 
 	value = arm64_image_flag_field(flags, ARM64_IMAGE_FLAG_PAGE_SIZE);
-	if (((value == ARM64_IMAGE_FLAG_PAGE_SIZE_4K) &&
-			!system_supports_4kb_granule()) ||
-	    ((value == ARM64_IMAGE_FLAG_PAGE_SIZE_64K) &&
-			!system_supports_64kb_granule()) ||
-	    ((value == ARM64_IMAGE_FLAG_PAGE_SIZE_16K) &&
-			!system_supports_16kb_granule()))
-		return ERR_PTR(-EINVAL);
 
 	/* Load the kernel */
 	kbuf.image = image;
