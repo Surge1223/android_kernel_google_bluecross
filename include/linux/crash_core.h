@@ -23,6 +23,7 @@
 
 typedef u32 note_buf_t[CRASH_CORE_NOTE_BYTES/4];
 
+void crash_update_vmcoreinfo_safecopy(void *ptr);
 void crash_save_vmcoreinfo(void);
 void arch_crash_save_vmcoreinfo(void);
 __printf(1, 2)
@@ -51,9 +52,11 @@ phys_addr_t paddr_vmcoreinfo_note(void);
 #define VMCOREINFO_CONFIG(name) \
 	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
 
-extern u32 vmcoreinfo_note[VMCOREINFO_NOTE_SIZE/4];
-extern size_t vmcoreinfo_size;
-extern size_t vmcoreinfo_max_size;
+extern u32 *vmcoreinfo_note;
+
+Elf_Word *append_elf_note(Elf_Word *buf, char *name, unsigned int type,
+			  void *data, size_t data_len);
+void final_note(Elf_Word *buf);
 
 int __init parse_crashkernel(char *cmdline, unsigned long long system_ram,
 		unsigned long long *crash_size, unsigned long long *crash_base);
