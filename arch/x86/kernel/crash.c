@@ -290,6 +290,97 @@ static int prepare_elf64_ram_headers_callback(struct resource *res, void *arg)
 	return ret;
 }
 
+static int prepare_elf64_headers(struct crash_elf_data *ced,
+		void **addr, unsigned long *sz)
+{
+	Elf64_Ehdr *ehdr;
+	Elf64_Phdr *phdr;
+	unsigned long nr_cpus = num_possible_cpus(), nr_phdr, elf_sz;
+	unsigned char *buf, *bufp;
+	unsigned int cpu;
+	unsigned long long notes_addr;
+	int ret;
+
+	/* extra phdr for vmcoreinfo elf note */
+	nr_phdr = nr_cpus + 1;
+	nr_phdr += ced->max_nr_ranges;
+
+	/*
+	 * kexec-tools creates an extra PT_LOAD phdr for kernel text mapping
+	 * area on x86_64 (ffffffff80000000 - ffffffffa0000000).
+	 * I think this is required by tools like gdb. So same physical
+	 * memory will be mapped in two elf headers. One will contain kernel
+	 * text virtual addresses and other will have __va(physical) addresses.
+	 */
+
+	nr_phdr++;
+	elf_sz = sizeof(Elf64_Ehdr) + nr_phdr * sizeof(Elf64_Phdr);
+	elf_sz = ALIGN(elf_sz, ELF_CORE_HEADER_ALIGN);
+
+	buf = vzalloc(elf_sz);
+	if (!buf)
+		return -ENOMEM;
+
+	bufp = buf;
+	ehdr = (Elf64_Ehdr *)bufp;
+	bufp += sizeof(Elf64_Ehdr);
+	memcpy(ehdr->e_ident, ELFMAG, SELFMAG);
+	ehdr->e_ident[EI_CLASS] = ELFCLASS64;
+	ehdr->e_ident[EI_DATA] = ELFDATA2LSB;
+	ehdr->e_ident[EI_VERSION] = EV_CURRENT;
+	ehdr->e_ident[EI_OSABI] = ELF_OSABI;
+	memset(ehdr->e_ident + EI_PAD, 0, EI_NIDENT - EI_PAD);
+	ehdr->e_type = ET_CORE;
+	ehdr->e_machine = ELF_ARCH;
+	ehdr->e_version = EV_CURRENT;
+	ehdr->e_phoff = sizeof(Elf64_Ehdr);
+	ehdr->e_ehsize = sizeof(Elf64_Ehdr);
+	ehdr->e_phentsize = sizeof(Elf64_Phdr);
+
+	/* Prepare one phdr of type PT_NOTE for each present cpu */
+	for_each_present_cpu(cpu) {
+		phdr = (Elf64_Phdr *)bufp;
+		bufp += sizeof(Elf64_Phdr);
+		phdr->p_type = PT_NOTE;
+		notes_addr = per_cpu_ptr_to_phys(per_cpu_ptr(crash_notes, cpu));
+		phdr->p_offset = phdr->p_paddr = notes_addr;
+		phdr->p_filesz = phdr->p_memsz = sizeof(note_buf_t);
+		(ehdr->e_phnum)++;
+	}
+
+	/* Prepare one PT_NOTE header for vmcoreinfo */
+	phdr = (Elf64_Phdr *)bufp;
+	bufp += sizeof(Elf64_Phdr);
+	phdr->p_type = PT_NOTE;
+	phdr->p_offset = phdr->p_paddr = paddr_vmcoreinfo_note();
+	phdr->p_filesz = phdr->p_memsz = VMCOREINFO_NOTE_SIZE;
+	(ehdr->e_phnum)++;
+
+#ifdef CONFIG_X86_64
+	/* Prepare PT_LOAD type program header for kernel text region */
+	phdr = (Elf64_Phdr *)bufp;
+	bufp += sizeof(Elf64_Phdr);
+	phdr->p_type = PT_LOAD;
+	phdr->p_flags = PF_R|PF_W|PF_X;
+	phdr->p_vaddr = (Elf64_Addr)_text;
+	phdr->p_filesz = phdr->p_memsz = _end - _text;
+	phdr->p_offset = phdr->p_paddr = __pa_symbol(_text);
+	(ehdr->e_phnum)++;
+#endif
+
+	/* Prepare PT_LOAD headers for system ram chunks. */
+	ced->ehdr = ehdr;
+	ced->bufp = bufp;
+	ret = walk_system_ram_res(0, -1, ced,
+			prepare_elf64_ram_headers_callback);
+	if (ret < 0)
+		return ret;
+
+	*addr = buf;
+	*sz = elf_sz;
+	return 0;
+}
+
 /* Prepare elf headers. Return addr and size */
 static int prepare_elf_headers(struct kimage *image, void **addr,
 					unsigned long *sz)
