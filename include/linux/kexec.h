@@ -208,6 +208,7 @@ struct kimage {
 	unsigned long start;
 	struct page *control_code_page;
 	struct page *swap_page;
+	void *vmcoreinfo_data_copy; /* locates in the crash memory */
 
 	unsigned long nr_segments;
 	struct kexec_segment segment[KEXEC_SEGMENT_MAX];
@@ -277,39 +278,7 @@ extern void crash_kexec(struct pt_regs *);
 int kexec_should_crash(struct task_struct *);
 int kexec_crash_loaded(void);
 void crash_save_cpu(struct pt_regs *regs, int cpu);
-void crash_save_vmcoreinfo(void);
-void arch_crash_save_vmcoreinfo(void);
-__printf(1, 2)
-void vmcoreinfo_append_str(const char *fmt, ...);
-phys_addr_t paddr_vmcoreinfo_note(void);
-
-#define VMCOREINFO_OSRELEASE(value) \
-	vmcoreinfo_append_str("OSRELEASE=%s\n", value)
-#define VMCOREINFO_PAGESIZE(value) \
-	vmcoreinfo_append_str("PAGESIZE=%ld\n", value)
-#define VMCOREINFO_SYMBOL(name) \
-	vmcoreinfo_append_str("SYMBOL(%s)=%lx\n", #name, (unsigned long)&name)
-#define VMCOREINFO_SIZE(name) \
-	vmcoreinfo_append_str("SIZE(%s)=%lu\n", #name, \
-			      (unsigned long)sizeof(name))
-#define VMCOREINFO_STRUCT_SIZE(name) \
-	vmcoreinfo_append_str("SIZE(%s)=%lu\n", #name, \
-			      (unsigned long)sizeof(struct name))
-#define VMCOREINFO_OFFSET(name, field) \
-	vmcoreinfo_append_str("OFFSET(%s.%s)=%lu\n", #name, #field, \
-			      (unsigned long)offsetof(struct name, field))
-#define VMCOREINFO_LENGTH(name, value) \
-	vmcoreinfo_append_str("LENGTH(%s)=%lu\n", #name, (unsigned long)value)
-#define VMCOREINFO_NUMBER(name) \
-	vmcoreinfo_append_str("NUMBER(%s)=%ld\n", #name, (long)name)
-#define VMCOREINFO_CONFIG(name) \
-	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
-#define VMCOREINFO_PAGE_OFFSET(value) \
-	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
-#define VMCOREINFO_VMALLOC_START(value) \
-	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
-#define VMCOREINFO_VMEMMAP_START(value) \
-	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
+extern int kimage_crash_copy_vmcoreinfo(struct kimage *image);
 
 extern struct kimage *kexec_image;
 extern struct kimage *kexec_crash_image;
