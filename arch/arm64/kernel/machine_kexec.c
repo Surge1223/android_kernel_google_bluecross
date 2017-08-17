@@ -94,20 +94,20 @@ int machine_kexec_prepare(struct kimage *kimage)
 static void kexec_list_flush(struct kimage *kimage)
 {
     kimage_entry_t *entry;
-    
+
     for (entry = &kimage->head; ; entry++) {
         unsigned int flag;
         void *addr;
-        
+
         /* flush the list entries. */
         __flush_dcache_area(entry, sizeof(kimage_entry_t));
-        
+
         flag = *entry & IND_FLAGS;
         if (flag == IND_DONE)
             break;
-        
+
         addr = phys_to_virt(*entry & PAGE_MASK);
-        
+
         switch (flag) {
             case IND_INDIRECTION:
                 /* Set entry point just before the new list page. */
@@ -213,6 +213,7 @@ void machine_kexec(struct kimage *kimage)
         kexec_segment_flush(kimage);
 
     pr_info("Bye!\n");
+
     local_irq_disable();
     local_fiq_disable();
 
@@ -292,15 +293,15 @@ void crash_smp_send_stop(void)
  */
 void machine_crash_shutdown(struct pt_regs *regs)
 {
-    local_irq_disable();
+	local_irq_disable();
 
-    /* shutdown non-crashing cpus */
-    crash_smp_send_stop();
+	/* shutdown non-crashing cpus */
+	crash_smp_send_stop();
 
-    /* for crashing cpu */
-    crash_save_cpu(regs, smp_processor_id());
-    machine_kexec_mask_interrupts();
-    pr_info("Starting crashdump kernel...\n");
+        /* for crashing cpu */
+        crash_save_cpu(regs, smp_processor_id());
+        machine_kexec_mask_interrupts();
+        pr_info("Starting crashdump kernel...\n");
 }
 
 void arch_kexec_protect_crashkres(void)
