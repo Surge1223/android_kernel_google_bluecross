@@ -271,23 +271,6 @@ static void machine_kexec_mask_interrupts(void)
     }
 }
 
-void crash_smp_send_stop(void)
-{
-	static int cpus_stopped;
-
-	/*
-	 * This function can be called twice in panic path, but obviously
-	 * we execute this only once.
-	 */
-	if (cpus_stopped)
-		return;
-
-	/* shutdown non-crashing cpus */
-	smp_send_crash_stop();
-
-	cpus_stopped = 1;
-}
-
 /**
  * machine_crash_shutdown - shutdown non-crashing cpus and save registers
  */
