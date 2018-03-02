@@ -36,7 +36,15 @@ int __weak arch_kexec_kernel_image_probe(struct kimage *image, void *buf,
 
 void * __weak arch_kexec_kernel_image_load(struct kimage *image)
 {
-	return ERR_PTR(-ENOEXEC);
+	return kexec_image_load_default(image);
+}
+
+int kexec_image_post_load_cleanup_default(struct kimage *image)
+{
+	if (!image->fops || !image->fops->cleanup)
+		return 0;
+
+	return image->fops->cleanup(image->image_loader_data);
 }
 
 int __weak arch_kimage_file_post_load_cleanup(struct kimage *image)
