@@ -148,7 +148,76 @@ struct kexec_file_ops {
 	kexec_verify_sig_t *verify_sig;
 #endif
 };
-#endif
+
+extern const struct kexec_file_ops * const kexec_file_loaders[];
+
+int kexec_image_probe_default(struct kimage *image, void *buf,
+			      unsigned long buf_len);
+int kexec_image_post_load_cleanup_default(struct kimage *image);
+
+/**
+ * struct kexec_buf - parameters for finding a place for a buffer in memory
+ * @image:	kexec image in which memory to search.
+ * @buffer:	Contents which will be copied to the allocated memory.
+ * @bufsz:	Size of @buffer.
+ * @mem:	On return will have address of the buffer in memory.
+ * @memsz:	Size for the buffer in memory.
+ * @buf_align:	Minimum alignment needed.
+ * @buf_min:	The buffer can't be placed below this address.
+ * @buf_max:	The buffer can't be placed above this address.
+ * @top_down:	Allocate from top of memory.
+ */
+struct kexec_buf {
+	struct kimage *image;
+	void *buffer;
+	unsigned long bufsz;
+	unsigned long mem;
+	unsigned long memsz;
+	unsigned long buf_align;
+	unsigned long buf_min;
+	unsigned long buf_max;
+	bool top_down;
+};
+
+int kexec_load_purgatory(struct kimage *image, struct kexec_buf *kbuf);
+int kexec_purgatory_get_set_symbol(struct kimage *image, const char *name,
+				   void *buf, unsigned int size,
+				   bool get_value);
+void *kexec_purgatory_get_symbol_addr(struct kimage *image, const char *name);
+
+int __weak arch_kexec_apply_relocations_add(struct purgatory_info *pi,
+					    Elf_Shdr *section,
+					    const Elf_Shdr *relsec,
+					    const Elf_Shdr *symtab);
+int __weak arch_kexec_apply_relocations(struct purgatory_info *pi,
+					Elf_Shdr *section,
+					const Elf_Shdr *relsec,
+					const Elf_Shdr *symtab);
+
+int __weak arch_kexec_walk_mem(struct kexec_buf *kbuf,
+			       int (*func)(struct resource *, void *));
+extern int kexec_add_buffer(struct kexec_buf *kbuf);
+int kexec_locate_mem_hole(struct kexec_buf *kbuf);
+
+/* Alignment required for elf header segment */
+#define ELF_CORE_HEADER_ALIGN   4096
+
+struct crash_mem_range {
+	u64 start, end;
+};
+
+struct crash_mem {
+	unsigned int max_nr_ranges;
+	unsigned int nr_ranges;
+	struct crash_mem_range ranges[0];
+};
+
+extern int crash_exclude_mem_range(struct crash_mem *mem,
+				   unsigned long long mstart,
+				   unsigned long long mend);
+extern int crash_prepare_elf64_headers(struct crash_mem *mem, int kernel_map,
+				       void **addr, unsigned long *sz);
+#endif /* CONFIG_KEXEC_FILE */
 
 struct kimage {
 	kimage_entry_t head;
