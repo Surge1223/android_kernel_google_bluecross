@@ -16,6 +16,7 @@
 #include <linux/libfdt.h>
 #include <linux/memblock.h>
 #include <linux/of_fdt.h>
+#include <linux/random.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/types.h>
@@ -28,6 +29,7 @@
 #define FDT_PSTR_INITRD_STA	"linux,initrd-start"
 #define FDT_PSTR_INITRD_END	"linux,initrd-end"
 #define FDT_PSTR_BOOTARGS	"bootargs"
+#define FDT_PSTR_KASLR_SEED	"kaslr-seed"
 
 const struct kexec_file_ops * const kexec_file_loaders[] = {
 	&kexec_image_ops,
@@ -46,11 +48,38 @@ int arch_kimage_file_post_load_cleanup(struct kimage *image)
 	return kexec_image_post_load_cleanup_default(image);
 }
 
+/* crng needs to have been initialized for providing kaslr-seed */
+static int random_ready;
+
+static void random_ready_notified(struct random_ready_callback *unused)
+{
+	random_ready = 1;
+}
+
+static struct random_ready_callback random_ready_cb = {
+	.func = random_ready_notified,
+};
+
+static __init int init_random_ready_cb(void)
+{
+	int ret;
+
+	ret = add_random_ready_callback(&random_ready_cb);
+	if (ret == -EALREADY)
+		random_ready = 1;
+	else if (ret)
+		pr_warn("failed to add a callback for random_ready\n");
+
+	return 0;
+}
+late_initcall(init_random_ready_cb)
+
 static int setup_dtb(struct kimage *image,
 		     unsigned long initrd_load_addr, unsigned long initrd_len,
 		     char *cmdline, void *dtb)
 {
 	int nodeoffset;
+	u64 value;
 	int ret;
 
 	nodeoffset = fdt_path_offset(dtb, "/chosen");
@@ -106,12 +135,27 @@ static int setup_dtb(struct kimage *image,
 			return -EINVAL;
 	}
 
+	/* add kaslr-seed */
+	ret = fdt_delprop(dtb, nodeoffset, FDT_PSTR_KASLR_SEED);
+	if (ret && (ret != -FDT_ERR_NOTFOUND))
+		return -EINVAL;
+
+	if (random_ready) {
+		get_random_bytes(&value, sizeof(value));
+		ret = fdt_setprop_u64(dtb, nodeoffset, FDT_PSTR_KASLR_SEED,
+							value);
+		if (ret)
+			return (ret == -FDT_ERR_NOSPACE ? -ENOMEM : -EINVAL);
+	} else {
+		pr_notice("kaslr-seed won't be fed\n");
+	}
+
 	return 0;
 }
 
 /*
  * More space needed so that we can add initrd, bootargs,
- * userable-memory-range and elfcorehdr.
+ * userable-memory-range, elfcorehdr and kaslr-seed.
  */
 #define DTB_EXTRA_SPACE 0x1000
 
