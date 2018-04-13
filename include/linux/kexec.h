@@ -183,12 +183,6 @@ struct kexec_buf {
 	bool top_down;
 };
 
-int kexec_load_purgatory(struct kimage *image, struct kexec_buf *kbuf);
-int kexec_purgatory_get_set_symbol(struct kimage *image, const char *name,
-				   void *buf, unsigned int size,
-				   bool get_value);
-void *kexec_purgatory_get_symbol_addr(struct kimage *image, const char *name);
-
 int __weak arch_kexec_apply_relocations_add(struct purgatory_info *pi,
 					    Elf_Shdr *section,
 					    const Elf_Shdr *relsec,
@@ -351,10 +345,6 @@ int crash_shrink_memory(unsigned long new_size);
 size_t crash_get_memory_size(void);
 void crash_free_reserved_phys_range(unsigned long begin, unsigned long end);
 
-int __weak arch_kexec_apply_relocations_add(const Elf_Ehdr *ehdr,
-					Elf_Shdr *sechdrs, unsigned int relsec);
-int __weak arch_kexec_apply_relocations(const Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
-					unsigned int relsec);
 void arch_kexec_protect_crashkres(void);
 void arch_kexec_unprotect_crashkres(void);
 
