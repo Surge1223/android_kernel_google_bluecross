@@ -130,6 +130,8 @@ struct purgatory_info {
 	void *purgatory_buf;
 };
 
+struct kimage;
+
 typedef int (kexec_probe_t)(const char *kernel_buf, unsigned long kernel_size);
 typedef void *(kexec_load_t)(struct kimage *image, char *kernel_buf,
 			     unsigned long kernel_len, char *initrd,
