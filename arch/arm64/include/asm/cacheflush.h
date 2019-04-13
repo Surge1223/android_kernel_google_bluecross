@@ -65,6 +65,7 @@
  *		- kaddr  - page address
  *		- size   - region size
  */
+//extern void flush_cache_all(void);
 extern void flush_cache_range(struct vm_area_struct *vma, unsigned long start, unsigned long end);
 extern void flush_icache_range(unsigned long start, unsigned long end);
 extern void __flush_dcache_area(void *addr, size_t len);
@@ -87,7 +88,12 @@ static inline void flush_cache_page(struct vm_area_struct *vma,
 extern void __dma_map_area(const void *, size_t, int);
 extern void __dma_unmap_area(const void *, size_t, int);
 extern void __dma_flush_area(const void *, size_t);
+extern void __dma_inv_area(const void *, size_t);
+extern void __dma_clean_area(const void *, size_t);
 
+#define dmac_flush_range(start, end) __dma_flush_area(start, (void *)(end) - (void *)(start))
+#define dmac_inv_range(start, end) __dma_inv_area(start, (void *)(end) - (void *)(start))
+#define dmac_clean_range(start, end) __dma_clean_area(start, (void *)(end) - (void *)(start))
 /*
  * Copy user data from/to a page which is mapped into a different
  * processes address space.  Really, we want to allow our "user
