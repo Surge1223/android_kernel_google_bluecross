@@ -218,6 +218,7 @@ static void *__dma_alloc(struct device *dev, size_t size,
 	struct page *page;
 	void *ptr, *coherent_ptr;
 	bool coherent = is_dma_coherent(dev, attrs);
+	pgprot_t prot = __get_dma_pgprot(attrs, PAGE_KERNEL, false);
 
 	size = PAGE_ALIGN(size);
 
