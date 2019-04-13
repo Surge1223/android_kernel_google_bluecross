@@ -25,8 +25,6 @@
 #include <asm/alternative.h>
 #include <asm/uaccess.h>
 
-#include "proc-macros.S"
-
 /*
  *	flush_icache_range(start,end)
  *

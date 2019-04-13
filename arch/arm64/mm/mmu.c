@@ -361,12 +361,28 @@ static void create_mapping_late(phys_addr_t phys, unsigned long virt,
 			     NULL, !debug_pagealloc_enabled());
 }
 
+static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
+				phys_addr_t size, pgprot_t prot)
+{
+	if (virt < VMALLOC_START) {
+		pr_warn("BUG: not updating mapping for %pa at 0x%016lx - outside kernel range\n",
+			&phys, virt);
+		return;
+	}
+        __create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, true);
+
+
+	/* flush the TLBs after updating live kernel mappings */
+	flush_tlb_kernel_range(virt, virt + size);
+}
+
 static void __init __map_memblock(pgd_t *pgd, phys_addr_t start,
-				  phys_addr_t end, pgprot_t prot, int flags)
+				  phys_addr_t end, pgprot_t prot, bool allow_block_mappings)
 {
 	__create_pgd_mapping(pgd, start, __phys_to_virt(start), end - start,
-			     prot, early_pgtable_alloc, flags);
+			     prot, early_pgtable_alloc, !debug_pagealloc_enabled());
 }
+
 
 void __init mark_linear_text_alias_ro(void)
 {
@@ -383,10 +399,6 @@ static void __init map_mem(pgd_t *pgd)
 	phys_addr_t kernel_start = __pa_symbol(_text);
 	phys_addr_t kernel_end = __pa_symbol(__init_begin);
 	struct memblock_region *reg;
-	int flags = 0;
-
-	if (debug_pagealloc_enabled())
-		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
 
 	/*
 	 * Take care not to create a writable alias for the
@@ -411,7 +423,7 @@ static void __init map_mem(pgd_t *pgd)
 		if (memblock_is_nomap(reg))
 			continue;
 
-		__map_memblock(pgd, start, end, PAGE_KERNEL, flags);
+		__map_memblock(pgd, start, end, PAGE_KERNEL, !debug_pagealloc_enabled());
 	}
 
 	/*
@@ -421,7 +433,7 @@ static void __init map_mem(pgd_t *pgd)
 	 * protects it from inadvertent modification or execution.
 	 */
 	__map_memblock(pgd, kernel_start, kernel_end,
-		       PAGE_KERNEL, NO_CONT_MAPPINGS);
+		       PAGE_KERNEL, !debug_pagealloc_enabled());
 	memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
 
 #ifdef CONFIG_KEXEC_CORE
@@ -433,7 +445,7 @@ static void __init map_mem(pgd_t *pgd)
 	if (crashk_res.end) {
 		__map_memblock(pgd, crashk_res.start, crashk_res.end + 1,
 			       PAGE_KERNEL,
-			       NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS);
+			       !debug_pagealloc_enabled());
 		memblock_clear_nomap(crashk_res.start,
 				     resource_size(&crashk_res));
 	}
