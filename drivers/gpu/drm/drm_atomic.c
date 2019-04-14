@@ -862,14 +862,14 @@ static int drm_atomic_plane_check(struct drm_plane *plane,
 	int ret;
 
 	/* either *both* CRTC and FB must be set, or neither */
-	if (WARN_ON(state->crtc && !state->fb)) {
+/*	if (WARN_ON(state->crtc && !state->fb)) {
 		DRM_DEBUG_ATOMIC("CRTC set but no FB\n");
 		return -EINVAL;
 	} else if (WARN_ON(state->fb && !state->crtc)) {
 		DRM_DEBUG_ATOMIC("FB set but no CRTC\n");
 		return -EINVAL;
 	}
-
+*/
 	/* if disabled, we don't care about the rest of the state: */
 	if (!state->crtc)
 		return 0;

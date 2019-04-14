@@ -29,7 +29,7 @@ static inline void handle_cfi_failure(void *ptr)
 	WARN_RATELIMIT(1, "CFI failure (target: [<%px>] %pF):\n", ptr, ptr);
 #else
 	pr_err("CFI failure (target: [<%px>] %pF):\n", ptr, ptr);
-	BUG();
+//	BUG();
 #endif
 }
 
