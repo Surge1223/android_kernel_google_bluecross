@@ -7,10 +7,11 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
+#include <linux/module.h>
 #include <linux/capability.h>
 #include <linux/mm.h>
 #include <linux/file.h>
+#include <linux/of_fdt.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/kexec.h>
@@ -35,11 +36,15 @@
 #include <linux/console.h>
 #include <linux/vmalloc.h>
 #include <linux/swap.h>
+#include <linux/kmsg_dump.h>
 #include <linux/syscore_ops.h>
+#include <linux/kallsyms.h>
 #include <linux/compiler.h>
 #include <linux/hugetlb.h>
 #include <linux/frame.h>
+#include <linux/device.h>
 
+#include <asm/sections.h>
 #include <asm/page.h>
 #include <asm/sections.h>
 
@@ -310,6 +315,7 @@ static struct page *kimage_alloc_pages(gfp_t gfp_mask, unsigned int order)
 		count = 1 << order;
 		for (i = 0; i < count; i++)
 			SetPageReserved(pages + i);
+
 	}
 
 	return pages;
@@ -321,6 +327,7 @@ static void kimage_free_pages(struct page *page)
 
 	order = page_private(page);
 	count = 1 << order;
+
 	for (i = 0; i < count; i++)
 		ClearPageReserved(page + i);
 	__free_pages(page, order);
@@ -817,6 +824,7 @@ static int kimage_load_normal_segment(struct kimage *image,
 		else
 			buf += mchunk;
 		mbytes -= mchunk;
+
 	}
 out:
 	return result;
@@ -881,6 +889,7 @@ static int kimage_load_crash_segment(struct kimage *image,
 		else
 			buf += mchunk;
 		mbytes -= mchunk;
+
 	}
 out:
 	return result;
@@ -1097,6 +1106,7 @@ int kernel_kexec(void)
 {
 	int error = 0;
 
+	printk("KERNEL_KEXEC: BEGIN\n");
 	if (!mutex_trylock(&kexec_mutex))
 		return -EBUSY;
 	if (!kexec_image) {
@@ -1137,7 +1147,17 @@ int kernel_kexec(void)
 	} else
 #endif
 	{
+		printk(KERN_EMERG "KEXEC: starting new kernel\n");
 		kexec_in_progress = true;
+
+		printk(KERN_EMERG "KEXEC: preempt_disable\n");
+		preempt_disable();
+
+		printk(KERN_EMERG "KEXEC: disable interrupts\n");
+		local_irq_disable();
+		local_fiq_disable();
+
+		printk(KERN_EMERG "KEXEC: kernel_restart_prepare_ptr\n");
 		kernel_restart_prepare(NULL);
 		migrate_to_reboot_cpu();
 
@@ -1148,10 +1168,11 @@ int kernel_kexec(void)
 		 * CPU hotplug again; so re-enable it here.
 		 */
 		cpu_hotplug_enable();
-		pr_emerg("Starting new kernel\n");
+		printk(KERN_EMERG "KEXEC: machine_shutdown\n");
 		machine_shutdown();
 	}
-
+        
+        printk(KERN_EMERG "KEXEC: machine_kexec\n");
 	machine_kexec(kexec_image);
 
 #ifdef CONFIG_KEXEC_JUMP

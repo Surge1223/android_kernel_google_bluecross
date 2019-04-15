@@ -29,8 +29,8 @@ config PROC_FS
 	  programs depend on this, so everyone should say Y here.
 
 config PROC_KCORE
-	bool "/proc/kcore support" if !ARM
-	depends on PROC_FS && MMU
+	bool "/proc/kcore support"
+	depends on PROC_FS && MM
 	help
 	  Provides a virtual ELF core file of the live kernel.  This can
 	  be read with gdb and other ELF tools.  No modifications can be

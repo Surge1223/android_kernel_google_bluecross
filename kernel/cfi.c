@@ -280,8 +280,8 @@ void cfi_slowpath_handler(uint64_t id, void *ptr, void *diag)
 
 	if (likely(check))
 		check(id, ptr, diag);
-	else /* Don't allow unchecked modules */
-		handle_cfi_failure(ptr);
+	//else /* Don't allow unchecked modules */
+	//	handle_cfi_failure(ptr);
 }
 EXPORT_SYMBOL(cfi_slowpath_handler);
 #endif /* CONFIG_MODULES */
