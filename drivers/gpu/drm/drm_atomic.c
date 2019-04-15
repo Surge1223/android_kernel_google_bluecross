@@ -862,14 +862,14 @@ static int drm_atomic_plane_check(struct drm_plane *plane,
 	int ret;
 
 	/* either *both* CRTC and FB must be set, or neither */
-/*	if (WARN_ON(state->crtc && !state->fb)) {
+	if (WARN_ON(state->crtc && !state->fb)) {
 		DRM_DEBUG_ATOMIC("CRTC set but no FB\n");
-		return -EINVAL;
+		return 0; // -EINVAL;
 	} else if (WARN_ON(state->fb && !state->crtc)) {
 		DRM_DEBUG_ATOMIC("FB set but no CRTC\n");
-		return -EINVAL;
+		return 0; //-EINVAL;
 	}
-*/
+
 	/* if disabled, we don't care about the rest of the state: */
 	if (!state->crtc)
 		return 0;
@@ -1445,7 +1445,7 @@ int drm_atomic_check_only(struct drm_atomic_state *state)
 		if (ret) {
 			DRM_DEBUG_ATOMIC("[PLANE:%d:%s] atomic core check failed\n",
 					 plane->base.id, plane->name);
-			return ret;
+			return 0;
 		}
 	}
 
@@ -1454,7 +1454,7 @@ int drm_atomic_check_only(struct drm_atomic_state *state)
 		if (ret) {
 			DRM_DEBUG_ATOMIC("[CRTC:%d:%s] atomic core check failed\n",
 					 crtc->base.id, crtc->name);
-			return ret;
+			return 0;
 		}
 	}
 
