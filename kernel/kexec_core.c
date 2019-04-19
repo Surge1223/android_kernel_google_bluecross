@@ -1106,7 +1106,7 @@ int kernel_kexec(void)
 {
 	int error = 0;
 
-	printk("KERNEL_KEXEC: BEGIN\n");
+	printk("KEXEC: BEGIN\n");
 	if (!mutex_trylock(&kexec_mutex))
 		return -EBUSY;
 	if (!kexec_image) {
@@ -1167,11 +1167,12 @@ int kernel_kexec(void)
 		 * the reboot case). However, the kexec path depends on using
 		 * CPU hotplug again; so re-enable it here.
 		 */
+		//cpu_hotplug_enable();
 		cpu_hotplug_enable();
-		printk(KERN_EMERG "KEXEC: machine_shutdown\n");
+                printk(KERN_EMERG "KEXEC: machine_shutdown\n");
 		machine_shutdown();
 	}
-        
+
         printk(KERN_EMERG "KEXEC: machine_kexec\n");
 	machine_kexec(kexec_image);
 
